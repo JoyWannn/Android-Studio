@@ -1,0 +1,28 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+        //BUILD SUCCESSFUL
+//        maven {
+//            url "https://repo.eclipse.org/content/repositories/paho-snapshots/"
+//        }
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        //BUILD SUCCESSFUL
+        maven {
+            //url "https://repo.eclipse.org/content/repositories/paho-snapshots/"
+            url "https://jitpack.io"
+        }
+
+
+    }
+
+}
+rootProject.name = "My Application"
+include ':app'
