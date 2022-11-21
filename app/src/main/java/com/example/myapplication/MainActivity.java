@@ -42,20 +42,7 @@ public class MainActivity extends AppCompatActivity {
 
         final TextView text_view = (TextView) findViewById(R.id.text_view);
 
-        new Thread(new Runnable(){
-            @Override
-            public void run(){
-                MysqlCon con = new MysqlCon();
-                con.run();
-                final String data = con.getData();
-                Log.v("OK",data);
-                text_view.post(new Runnable() {
-                    public void run() {
-                        text_view.setText(data);
-                    }
-                });
-            }
-        }).start();
+
 
             String clientId = MqttClient.generateClientId();
 //        String clientId = "mqttx_5d1c1306";
@@ -94,6 +81,13 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "onFailure");
                     }
                 });
+                new Thread(new Runnable(){
+                    @Override
+                    public void run(){
+                        MysqlCon con = new MysqlCon();
+                        con.run();
+                    }
+                }).start();
             }
         });
 
