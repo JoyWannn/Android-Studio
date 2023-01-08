@@ -3,10 +3,6 @@ pluginManagement {
         gradlePluginPortal()
         google()
         mavenCentral()
-        //BUILD SUCCESSFUL
-//        maven {
-//            url "https://repo.eclipse.org/content/repositories/paho-snapshots/"
-//        }
     }
 }
 dependencyResolutionManagement {
@@ -14,15 +10,12 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        //BUILD SUCCESSFUL
+        //Add the JitPack repository to use package repository for Git
+        //Publish JVM and Android libraries
         maven {
-            //url "https://repo.eclipse.org/content/repositories/paho-snapshots/"
             url "https://jitpack.io"
         }
-
-
     }
-
 }
 rootProject.name = "My Application"
 include ':app'

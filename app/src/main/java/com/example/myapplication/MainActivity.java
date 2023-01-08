@@ -1,181 +1,171 @@
 package com.example.myapplication;
 
+import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.widget.Button;
-import android.widget.TextView;
-
-import androidx.appcompat.app.AppCompatActivity;
+import android.widget.MediaController;
+import android.widget.VideoView;
 
 //import org.eclipse.paho.android.service.MqttAndroidClient;
+import androidx.appcompat.app.AppCompatActivity;
+
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.MqttTopic;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 
 import info.mqtt.android.service.Ack;
 import info.mqtt.android.service.MqttAndroidClient;
 
-public class MainActivity extends AppCompatActivity {
-    static String MQTTHOST = "tcp://broker.hivemq.com:1883";
-    static String USERNAME = "JoyWan";
-    static String PASSWORD = "jojojojo123";
+public class MainActivity extends AppCompatActivity{
 
-    String topicName = "MQTT Test";
-    static String TAG = "JoyWan";
-    MqttAndroidClient client;
+    private final String MQTTHOST = "tcp://broker.hivemq.com:1883";
 
+    private final String TAG = "button_check";
+
+    MqttFunction mqttFunction = new MqttFunction();
+
+    public static MqttAndroidClient client;
+
+    int flag = 0;
+
+    public static VideoView display;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
-            super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_main);
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        final TextView text_view = (TextView) findViewById(R.id.text_view);
-
-
-
-            String clientId = MqttClient.generateClientId();
-//        String clientId = "mqttx_5d1c1306";
-            //client端設定
-            //client = new MqttAndroidClient(this, MQTTHOST, clientId, MqttAndroidClient.Ack.AUTO_ACK);
+        String clientId = MqttClient.generateClientId();
         client = new MqttAndroidClient(this, MQTTHOST, clientId, Ack.AUTO_ACK);
 
-        Button connectButton = findViewById(R.id.button1);
+        Button connectButton = findViewById(R.id.StartButton);
+        Button gameButton = findViewById(R.id.GameButton);
+        Button displayButton = findViewById(R.id.DisplayButton);
+
         connectButton.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "onClick1");
-                MqttConnectOptions options = new MqttConnectOptions();
-
-                //新增
-                options.setCleanSession(true);
-                options.setAutomaticReconnect(true);
-
-                options.setUserName(USERNAME);
-                options.setPassword(PASSWORD.toCharArray());
-                IMqttToken token = null;
-                token = client.connect();
-                if (client.isConnected() == false) {
-                    Log.d(TAG, "client.isConnected() == false");
-                }
-                token.setActionCallback(new IMqttActionListener() {
+                mqttFunction.connect();
+                new Thread(new Runnable() {
                     @Override
-                    public void onSuccess(IMqttToken asyncActionToken) {
-                        // We are connected
-                        Log.d(TAG, "onSuccess");
-                    }
-
-                    @Override
-                    public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                        // Something went wrong e.g. connection timeout or firewall problems
-                        Log.d(TAG, "onFailure");
-                    }
-                });
-                new Thread(new Runnable(){
-                    @Override
-                    public void run(){
+                    public void run() {
                         MysqlCon con = new MysqlCon();
                         con.run();
                     }
                 }).start();
+                gameButton.setVisibility(View.VISIBLE);
+                displayButton.setVisibility(View.VISIBLE);
+//                Intent intent = new Intent();
+//                intent.setClass(MainActivity.this, ChooseActivity.class);
+//                startActivity(intent);
             }
         });
 
-        Button publishButton = findViewById(R.id.button2);
-        publishButton.setOnClickListener(new Button.OnClickListener() {
+        gameButton.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                publish("Forward");
                 Log.d(TAG, "onClick2");
+                mqttFunction.publish("play");
+                View ctrLayout=findViewById(R.id.controller_Layout);
+                ctrLayout.setVisibility(View.VISIBLE);
+                View btnLayout = findViewById(R.id.buttonLayout);
+                btnLayout.setVisibility(View.INVISIBLE);
             }
         });
-          Button subscribeButton = findViewById(R.id.button3);
-                subscribeButton.setOnClickListener(new Button.OnClickListener() {
+        displayButton.setOnClickListener(new Button.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClick3");
+                mqttFunction.subscribe();
+                client.setCallback(new MqttCallback() {
                     @Override
-                    public void onClick(View view) {
-                        subscribe();
-                        Log.d(TAG, "onClick3");
+                    public void connectionLost(Throwable cause) {
+                        Log.e(TAG,"connect lost!");
                     }
-        });
-    }
-    public void publish(String payload) {
-        String topic = topicName;
-        MqttMessage message = new MqttMessage();
-        message.setPayload(payload.getBytes());
-        message.setQos(0);
 
-//        client.publish(topic, message);
-        client.publish(topic, message,null, new IMqttActionListener() {
-            @Override
-            public void onSuccess(IMqttToken asyncActionToken) {
-                Log.i(TAG, "publish succeed!");
-            }
+                    @Override
+                    public void messageArrived(String topic, MqttMessage message) throws Exception {
+                        Log.d(TAG,"message arrived:"+message);
+                        String mes = message.toString();
+                        if(mes.equals("play")){
+                            videoPlay();
+                            Log.d(TAG,"play video");
+                        }
+                        else if(mes.equals("pause")){
+                            display.pause();
+                        }
+                        else if(mes.equals("start")){
+                            display.start();
+                        }
+                    }
+                    @Override
+                    public void deliveryComplete(IMqttDeliveryToken token) {
 
-            @Override
-            public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                Log.i(TAG, "publish failed!");
-            }
-        });
-    }
-    public void subscribe(){
-        String topic = topicName;
-        int qos = 1;
-        IMqttToken subToken = client.subscribe(topic, qos);
-        subToken.setActionCallback(new IMqttActionListener() {
-            @Override
-            public void onSuccess(IMqttToken asyncActionToken) {
-                // The message was published
-                Log.i(TAG, "subscribe succeed!");
-            }
-
-            @Override
-            public void onFailure(IMqttToken asyncActionToken,
-                                  Throwable exception) {
-                // The subscription could not be performed, maybe the user was not
-                // authorized to subscribe on the specified topic e.g. using wildcards
-                Log.i(TAG, "subscribe failed!");
+                    }
+                });
             }
         });
+        //button of controller layout
+        Button leftButton = findViewById(R.id.button_left);
+        Button forwardButton = findViewById(R.id.button_forward);
+        Button rightButton = findViewById(R.id.button_right);
+        Button pauseButton = findViewById(R.id.button_pause);
+        leftButton.setOnClickListener(new Button.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClickLeft");
+                mqttFunction.publish("left");
+            }
+        });
+        rightButton.setOnClickListener(new Button.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClickLeft");
+                mqttFunction.publish("right");
+            }
+        });
+        forwardButton.setOnClickListener(new Button.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClickLeft");
+                mqttFunction.publish("forward");
+            }
+        });
+
+        pauseButton.setOnClickListener(new Button.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClickPause");
+                if(flag == 0){
+                    mqttFunction.publish("pause");
+                    flag = 1;
+                }
+                else if(flag==1){
+                    mqttFunction.publish("start");
+                    flag = 0;
+                }
+
+            }
+        });
     }
-//
-//    private static final String SQL_INSERT = "INSERT INTO `Messages` (`message`,`topic`,`quality_of_service`) VALUES (?,?,?)";
-//    private PreparedStatement statement;
-//    private mySQL_URL = ""
-//    public SubscribeCallback(final MqttClient mqttClient) {
-//        this.mqttClient = mqttClient;
-//
-//        try {
-//            final Connection conn = DriverManager.getConnection(JDBC_URL);
-//            statement = conn.prepareStatement(SQL_INSERT);
-//        } catch (SQLException e) {
-//            log.error("Could not connect to database. Exiting", e);
-//            System.exit(1);
-//        }
-//    }
-//    @Override
-//    public void messageArrived(MqttTopic topic, MqttMessage message) throws Exception {
-//
-//        //Let's assume we have a prepared statement with the SQL.
-//        try {
-//            statement.setBytes(1, message.getPayload());
-//            statement.setString(2, topic.getName());
-//            statement.setInt(3, message.getQos());
-//
-//            //Ok, let's persist to the database
-//            statement.executeUpdate();
-//        } catch (SQLException e) {
-//            log.error("Error while inserting", e);
-//        }
-//
-//    }
+    public void videoPlay(){
+        display = findViewById(R.id.videoDisplay);
+        display.setVisibility(View.VISIBLE);
+        View btnLayout = findViewById(R.id.buttonLayout);
+        btnLayout.setVisibility(View.INVISIBLE);
+        Uri uri = Uri.parse("android.resource://com.example.myapplication/"+R.raw.gallery);
+        display.setVideoURI(uri);
+        display.start();
+    }
 }

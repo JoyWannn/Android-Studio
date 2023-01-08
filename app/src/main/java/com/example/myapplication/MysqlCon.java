@@ -2,53 +2,63 @@ package com.example.myapplication;
 
 import android.util.Log;
 
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttTopic;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
+import info.mqtt.android.service.MqttAndroidClient;
 
 public class MysqlCon {
     // 資料庫定義
     String mysql_ip = "localhost";
     int mysql_port = 3306; // Port 預設為 3306
     String db_name = "mqtt_Test";
-//    String url = "jdbc:mysql://"+mysql_ip+":"+mysql_port+"/"+db_name;
-    String url = "jdbc:mysql://192.168.56.1:3306/?user=superu";
-//    String url = "jdbc:mysql://"+mysql_ip+":"+mysql_port+"/"+db_name+"?useCursorFetch=true";
-//    String url = "jdbc:mysql://localhost:3306/mqtt_Test?useSSL=false&serverTimezone=CST";
-//    String url = "url = jdbc:mysql://localhost:3306/mqtt_Test?serverTimezone=CST&characterEncoding=utf8&useUnicode=true&useSSL=false";
+    String url = "jdbc:mysql://us-cdbr-east-06.cleardb.net:3306";
 
-    String db_user = "superu";
-    String db_password = "class100";
+    String db_user = "bda56e637d88e8";
+    String db_password = "5da60d7e";
+    Connection con;
+
+    private PreparedStatement statement;
+    private static final String SQL_INSERT = "INSERT INTO mqtt (quality_of_service,topic,message) VALUES (2,mqtt,forward)";
 
     public void run() {
         try {
-            //目前有成功
-//            Class.forName("com.mysql.cj.jdbc.Driver");
+            //加載驅動
             Class.forName("com.mysql.jdbc.Driver");
             Log.v("JDBC_Driver", "Driver loaded!");
         } catch (ClassNotFoundException e) {
             Log.e("JDBC_Driver", "Driver loaded failed");
             return;
         }
-//        try {
-//            //新加的
-//            Class.forName("oracle.jdbc.driver.OracleDriver");
-//            Log.v("Oracle_Driver","Driver loaded!");
-//        }catch( ClassNotFoundException e) {
-//            Log.e("Oracle_Driver","Driver loaded failed");
-//            return;
-//        }
-
         // 連接資料庫
         try {
-            //失敗
-            Connection con = DriverManager.getConnection(url, db_user, db_password);
+            con = DriverManager.getConnection(url, db_user, db_password);
             Log.v("DB", "MySQL connected!");
         } catch (SQLException e) {
             Log.e("DB", "MySQL connected failed.");
-            Log.e("DB", e.toString());
+        }
+
+    }
+
+    public void insertData(String topic, MqttMessage message){
+        try {
+            //insert
+            statement = con.prepareStatement(SQL_INSERT);
+            statement.setInt(1, message.getQos());
+            statement.setString(2, topic);
+            statement.setBytes(3, message.getPayload());
+            statement.executeUpdate();
+            Log.v("DB", "insert success!");
+        } catch (SQLException e) {
+            Log.e("DB", "insert failed.");
         }
     }
 
@@ -72,4 +82,6 @@ public class MysqlCon {
         }
         return data;
     }
+
+
 }
